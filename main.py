@@ -4,25 +4,37 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 import streamlit as st
+import chromedriver_autoinstaller
 
 # Configuración inicial de Streamlit
 st.title("Scraping de Ofertas Laborales de Computrabajo.cl")
 st.markdown("Esta herramienta permite buscar ofertas laborales según palabras clave definidas.")
-st.markdown("Importante: Debe tener instalado Chrome")
+st.markdown("Importante: Se utiliza un navegador en modo headless.")
+
+# Configurar Chrome en modo headless
+def initialize_driver():
+    chromedriver_autoinstaller.install()  # Instala automáticamente el ChromeDriver
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Ejecutar sin interfaz gráfica
+    chrome_options.add_argument("--no-sandbox")  # Requerido en algunos entornos
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Optimizar para entornos limitados
+    chrome_options.add_argument("--disable-gpu")  # Evitar problemas gráficos
+    return webdriver.Chrome(options=chrome_options)
 
 # Entrada de palabras clave
 keywords_input = st.text_input("Ingrese palabras clave separadas por comas", "analista, ejecutivo, software, desarrollador")
 keywords = [keyword.strip().lower() for keyword in keywords_input.split(',')]
 
-# Entrada de URL
-# url = st.text_input("Ingrese el enlace del sitio web", "https://cl.computrabajo.com/empleos-en-rmetropolitana?pubdate=1&by=publicationtime")
+# URL a procesar
 url = "https://cl.computrabajo.com/empleos-en-rmetropolitana?pubdate=1&by=publicationtime"
 
 # Botón para iniciar el scraping
 if st.button("Iniciar scraping"):
     st.write("Iniciando scraping...")
-    driver = webdriver.Chrome()
+    driver = initialize_driver()  # Inicializar el navegador
     driver.get(url)
 
     # Lista para almacenar los resultados
@@ -65,10 +77,6 @@ if st.button("Iniciar scraping"):
                     }
                     job_results.append(job_data)
 
-            # Mostrar resultados parciales en Streamlit
-            # st.write(f"Resultados encontrados: {len(job_results)}")
-            # st.json(job_results[-5:])  # Mostrar los últimos 5 resultados
-
             # Intentar ir a la siguiente página
             try:
                 next_button = WebDriverWait(driver, 15).until(
@@ -78,7 +86,7 @@ if st.button("Iniciar scraping"):
                 time.sleep(3)
                 page_number += 1
 
-            except Exception as e:
+            except Exception:
                 st.write("No se pudo encontrar el botón de 'Siguiente' o no hay más páginas.")
                 break
 
